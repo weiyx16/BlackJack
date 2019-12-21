@@ -16,18 +16,27 @@ import javafx.scene.layout.HBox;
 
 public class MainPane extends Pane 
 {
+    // Process related params
     private Stage primaryStage;
     private int money;
     private int deal;
     private List idx_list = new ArrayList<Integer>();
-    private int cur_card_loc; 
+    private int cur_card_order; 
     private int user_point;
     private List user_card_list = new ArrayList<Integer>();
     private int host_point;
     private List host_card_list = new ArrayList<Integer>();
+    private boolean insurance = false;
+
+    // GUI related params
+    private int card_X_loc = 150;
+    private int card_margin = 25;
+    private int card_Y_loc_user = 150;
+    private int card_Y_loc_host = 50;
     final private String card_prefix = "./card/";
     final private String card_ext = ".png";
-    
+    private ImageView host_card_hidden = new ImageView();
+
     MainPane(Stage primaryStage){
         this.primaryStage = primaryStage;
         this.money = 2000;
@@ -37,7 +46,7 @@ public class MainPane extends Pane
 
     private void init_params(){
         this.deal = 0;
-        this.cur_card_loc = 0;
+        this.cur_card_order = 0;
         for(int i=1; i<53; i++){  
             this.idx_list.add(i);  
         }
@@ -46,6 +55,7 @@ public class MainPane extends Pane
         this.user_point = 0;
         this.host_card_list = new ArrayList<Integer>();
         this.host_point = 0;
+        this.insurance = false;
     }
 
     private void init_pane(){
@@ -71,42 +81,41 @@ public class MainPane extends Pane
         Label dealhint = new Label("Bet: "+Integer.toString(this.deal));
         Label moneyhint = new Label("Money: "+Integer.toString(this.money));
         
-        this.user_card_list.add(this.idx_list.get(this.cur_card_loc));
+        this.user_card_list.add(this.idx_list.get(this.cur_card_order));
         ImageView user_card_left = new ImageView();
-        user_card_left.setX(150);
-        user_card_left.setY(200);
+        user_card_left.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
+        user_card_left.setY(this.card_Y_loc_user);
         user_card_left.setImage(new Image(idx_2_path()));
         
-        this.cur_card_loc += 1;
-        this.user_card_list.add(this.idx_list.get(this.cur_card_loc));
+        this.cur_card_order += 1;
+        this.user_card_list.add(this.idx_list.get(this.cur_card_order));
         ImageView user_card_right = new ImageView();
-        user_card_right.setX(200);
-        user_card_right.setY(200);
+        user_card_right.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
+        user_card_right.setY(this.card_Y_loc_user);
         user_card_right.setImage(new Image(idx_2_path()));
 
-        this.cur_card_loc += 1;
-        this.host_card_list.add(this.idx_list.get(this.cur_card_loc));
+        this.cur_card_order += 1;
+        this.host_card_list.add(this.idx_list.get(this.cur_card_order));
         ImageView host_card_left = new ImageView();
-        host_card_left.setX(150);
-        host_card_left.setY(50);
+        host_card_left.setX(this.card_X_loc+this.card_margin*this.host_card_list.size());
+        host_card_left.setY(this.card_Y_loc_host);
         host_card_left.setImage(new Image(idx_2_path()));
 
-        this.cur_card_loc += 1;
-        this.host_card_list.add(this.idx_list.get(this.cur_card_loc));
-        ImageView host_card_right = new ImageView();
-        host_card_right.setImage(new Image(idx_2_path("b1fv")));
-        host_card_right.setX(200);
-        host_card_right.setY(50);
+        this.cur_card_order += 1;
+        this.host_card_list.add(this.idx_list.get(this.cur_card_order));
+        this.host_card_hidden.setImage(new Image(idx_2_path("b1fv")));
+        this.host_card_hidden.setX(this.card_X_loc+this.card_margin*this.host_card_list.size());
+        this.host_card_hidden.setY(this.card_Y_loc_host);
 
         calc_point(true);
+        System.out.printf("User card<%d\r\n",this.user_point);
         calc_point(false);
-        System.out.printf(" Debug>%d", this.user_point);
-        System.out.printf(" Debug>%d", this.host_point);
+        System.out.printf("Host card<%d\r\n",this.host_point);
         getChildren().clear();
-        getChildren().addAll(dealhint, moneyhint, user_card_left, user_card_right, host_card_left, host_card_right);
+        getChildren().addAll(dealhint, moneyhint, user_card_left, user_card_right, host_card_left, this.host_card_hidden);
         
         if (this.user_point==21){
-            host_card_right.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
+            this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
             if (this.host_point==21){
                 this.money += this.deal;
             }
@@ -116,15 +125,44 @@ public class MainPane extends Pane
             quitpane();
         }
         else{
-            if (this.host_point==21){
-                // Not A
-                if ((Integer)this.host_card_list.get(1)%13 != 1){
-                    host_card_right.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
-                    quitpane();
-                }
-                else{
-                    // Support Insurance here.
-                }
+            if ((Integer)this.host_card_list.get(0)%13 == 1){
+                // Support Insurance here. The shown card is A
+                this.insurance = true;
+                // Insurance Button
+                Button insbt = new Button("Insurance");
+                insbt.setLayoutX(200.0);
+                insbt.setLayoutY(160.0);
+                insbt.setOnMouseClicked(e -> {
+                        this.money -= (int)this.deal/2;
+                        if (this.host_point==21){
+                            this.money += this.deal;
+                            this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
+                            quitpane();
+                        }
+                        else{
+                            userplaypane();
+                        }
+                    }
+                );
+                // Skip Insurance Button
+                Button skipbt = new Button("Skip");
+                skipbt.setLayoutX(200.0);
+                skipbt.setLayoutY(200.0);
+                skipbt.setOnMouseClicked(e -> {
+                        if (this.host_point==21){
+                            this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
+                            quitpane();
+                        }
+                        else{
+                            userplaypane();
+                        }
+                    }
+                );
+                getChildren().addAll(insbt,skipbt);
+            }
+            else if (this.host_point==21){
+                this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
+                quitpane();
             }
             else{
                 userplaypane();
@@ -133,29 +171,60 @@ public class MainPane extends Pane
         
     }
 
+    private void user_add_card(){
+        this.cur_card_order += 1;
+        this.user_card_list.add(this.idx_list.get(this.cur_card_order));
+        ImageView user_card_new = new ImageView();
+        user_card_new.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
+        user_card_new.setY(this.card_Y_loc_user);
+        user_card_new.setImage(new Image(idx_2_path()));
+        calc_point(true);
+        System.out.printf("User card<%d\r\n",this.user_point);
+        getChildren().add(user_card_new);
+    }
+
+    private void host_add_card(){
+        this.cur_card_order += 1;
+        this.host_card_list.add(this.idx_list.get(this.cur_card_order));
+        ImageView host_card_new = new ImageView();
+        host_card_new.setX(this.card_X_loc+this.card_margin*this.host_card_list.size());
+        host_card_new.setY(this.card_Y_loc_host);
+        host_card_new.setImage(new Image(idx_2_path()));
+        calc_point(false);
+        System.out.printf("Host card<%d\r\n",this.host_point);
+        getChildren().add(host_card_new);
+    }
+
     private void userplaypane(){
+        if (this.insurance){
+            this.insurance = false;
+            getChildren().remove(getChildren().size()-2, getChildren().size());
+        }
         HBox opbox = new HBox(5);
         opbox.setAlignment(Pos.BOTTOM_CENTER);
         opbox.setLayoutX(50);
         opbox.setLayoutY(250);
         // Double Button
 		Button doublebt = new Button("Double");
-		doublebt.setOnMouseClicked(
-			new EventHandler<MouseEvent>(){
-				@Override
-				public void handle(MouseEvent e){
-                    // Double
-				}
-			}
+		doublebt.setOnMouseClicked(e->{
+                this.money -= this.deal;
+                this.deal *= 2;
+                user_add_card();
+                if (this.user_point > 21){
+                    quitpane();
+                }
+                else{
+                    hostplaypane();
+                }
+            }
         );
         Button hitbt = new Button("Hit me");
-		hitbt.setOnMouseClicked(
-			new EventHandler<MouseEvent>(){
-				@Override
-				public void handle(MouseEvent e){
-                    // hit
-				}
-			}
+		hitbt.setOnMouseClicked(e->{
+                user_add_card();
+                if (this.user_point > 21){
+                    quitpane();
+                }
+            }
         );
         Button standbt = new Button("Stand");
 		standbt.setOnMouseClicked(
@@ -187,11 +256,37 @@ public class MainPane extends Pane
     }
 
     private void hostplaypane(){
+        // Hidden card is shown
+        this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
 
+        while (this.host_point < 17){
+            host_add_card();
+        }
+
+        if(this.host_point > 21){
+            this.money += 2*this.deal;
+        }
+        else{
+            if(this.user_point > this.host_point){
+                this.money += 2*this.deal;
+            }
+            else if(this.user_point == this.host_point){
+                this.money += this.deal;
+            }
+            else{
+                // lose
+            }
+        }
+        quitpane();
     }
 
     private void quitpane(){
-		// Again Button
+        
+        if (this.insurance){
+            this.insurance = false;
+            getChildren().remove(getChildren().size()-2, getChildren().size());
+        }
+        // Again Button
 		Button againbt = new Button("Again");
 		againbt.setLayoutX(200.0);
 		againbt.setLayoutY(160.0);
@@ -230,18 +325,16 @@ public class MainPane extends Pane
         }
         for (int i=0;i<tmp_list.size();i++){
             int cur_idx = (Integer)tmp_list.get(i);
-            if (cur_idx != 1){
-                tmp_point_except_aces += idx_2_point(cur_idx);
-            }
-            else{
+            tmp_point_except_aces += idx_2_point(cur_idx);
+            if ((cur_idx%13 == 1)){
                 aces_number += 1;
             }
         }
-        int aces_equal_1 = 0;
+        int aces_equal_11 = aces_number;
         int tmp_point = tmp_point_except_aces;
-        while (aces_equal_1 <= aces_number){
-            tmp_point = tmp_point_except_aces + (aces_number-aces_equal_1)*10 + aces_equal_1*1;
-            aces_equal_1 += 1;
+        while (aces_equal_11>=0){
+            tmp_point = tmp_point_except_aces + aces_equal_11*10;
+            aces_equal_11 -= 1;
             if (tmp_point <= 21){
                 break;
             }
@@ -255,7 +348,7 @@ public class MainPane extends Pane
     }
 
     private int idx_2_point(int idx){
-        if (1<(idx%13) && (idx%13)<10){
+        if ((idx%13)<10 && (idx%13)>0){
             return idx%13;
         }
         else{
@@ -264,7 +357,7 @@ public class MainPane extends Pane
     }
 
     private String idx_2_path(){
-        return this.card_prefix + String.valueOf(this.idx_list.get(this.cur_card_loc)) + this.card_ext; 
+        return this.card_prefix + String.valueOf(this.idx_list.get(this.cur_card_order)) + this.card_ext; 
         
     }
     private String idx_2_path(String img_name){
