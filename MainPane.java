@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List; 
 import javafx.stage.Stage;
 import javafx.scene.Scene;
+import javafx.scene.chart.Axis;
 import javafx.geometry.Pos;
 import javafx.scene.layout.HBox;
 
@@ -27,15 +28,29 @@ public class MainPane extends Pane
     private int host_point;
     private List host_card_list = new ArrayList<Integer>();
     private boolean insurance = false;
+    private boolean is_split = false;
+    private List user_card_list_aux = new ArrayList<Integer>();
+    private int user_point_aux;
+    // Check two splits status
+    private boolean main_done = false;
+    private boolean aux_done = false;
+    private boolean main_bust = false;
+    private boolean aux_bust = false;
+    private boolean main_sur = false;
+    private boolean aux_sur = false;
 
     // GUI related params
     private int card_X_loc = 150;
+    private int card_X_loc_main = 50;
+    private int card_X_loc_aux = 200;
     private int card_margin = 25;
     private int card_Y_loc_user = 150;
     private int card_Y_loc_host = 50;
     final private String card_prefix = "./card/";
     final private String card_ext = ".png";
     private ImageView host_card_hidden = new ImageView();
+    private ImageView user_card_left = new ImageView();
+    private ImageView user_card_right = new ImageView();
 
     MainPane(Stage primaryStage){
         this.primaryStage = primaryStage;
@@ -45,7 +60,7 @@ public class MainPane extends Pane
     }
 
     private void init_params(){
-        this.deal = 0;
+        this.deal = 1;
         this.cur_card_order = 0;
         for(int i=1; i<53; i++){  
             this.idx_list.add(i);  
@@ -56,6 +71,15 @@ public class MainPane extends Pane
         this.host_card_list = new ArrayList<Integer>();
         this.host_point = 0;
         this.insurance = false;
+        this.is_split = false;
+        this.user_card_list_aux = new ArrayList<Integer>();
+        this.user_point_aux = 0;
+        this.main_done = false;
+        this.aux_done = false;
+        this.main_bust = false;
+        this.aux_bust = false;
+        this.main_sur = false;
+        this.aux_sur = false;
     }
 
     private void init_pane(){
@@ -82,17 +106,15 @@ public class MainPane extends Pane
         Label moneyhint = new Label("Money: "+Integer.toString(this.money));
         
         this.user_card_list.add(this.idx_list.get(this.cur_card_order));
-        ImageView user_card_left = new ImageView();
-        user_card_left.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
-        user_card_left.setY(this.card_Y_loc_user);
-        user_card_left.setImage(new Image(idx_2_path()));
+        this.user_card_left.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
+        this.user_card_left.setY(this.card_Y_loc_user);
+        this.user_card_left.setImage(new Image(idx_2_path()));
         
         this.cur_card_order += 1;
         this.user_card_list.add(this.idx_list.get(this.cur_card_order));
-        ImageView user_card_right = new ImageView();
-        user_card_right.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
-        user_card_right.setY(this.card_Y_loc_user);
-        user_card_right.setImage(new Image(idx_2_path()));
+        this.user_card_right.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
+        this.user_card_right.setY(this.card_Y_loc_user);
+        this.user_card_right.setImage(new Image(idx_2_path()));
 
         this.cur_card_order += 1;
         this.host_card_list.add(this.idx_list.get(this.cur_card_order));
@@ -107,12 +129,12 @@ public class MainPane extends Pane
         this.host_card_hidden.setX(this.card_X_loc+this.card_margin*this.host_card_list.size());
         this.host_card_hidden.setY(this.card_Y_loc_host);
 
-        calc_point(true);
+        calc_point(0);
         System.out.printf("User card<%d\r\n",this.user_point);
-        calc_point(false);
+        calc_point(1);
         System.out.printf("Host card<%d\r\n",this.host_point);
         getChildren().clear();
-        getChildren().addAll(dealhint, moneyhint, user_card_left, user_card_right, host_card_left, this.host_card_hidden);
+        getChildren().addAll(dealhint, moneyhint, this.user_card_left, this.user_card_right, host_card_left, this.host_card_hidden);
         
         if (this.user_point==21){
             this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
@@ -140,7 +162,12 @@ public class MainPane extends Pane
                             quitpane();
                         }
                         else{
-                            userplaypane();
+                            if ((Integer)this.user_card_list.get(0)%13 == (Integer)this.user_card_list.get(1)%13){
+                                userplaypane_split();
+                            }
+                            else{
+                                userplaypane();
+                            }
                         }
                     }
                 );
@@ -154,7 +181,12 @@ public class MainPane extends Pane
                             quitpane();
                         }
                         else{
-                            userplaypane();
+                            if ((Integer)this.user_card_list.get(0)%13 == (Integer)this.user_card_list.get(1)%13){
+                                userplay_split_check();
+                            }
+                            else{
+                                userplaypane();
+                            }
                         }
                     }
                 );
@@ -165,7 +197,12 @@ public class MainPane extends Pane
                 quitpane();
             }
             else{
-                userplaypane();
+                if ((Integer)this.user_card_list.get(0)%13 == (Integer)this.user_card_list.get(1)%13){
+                    userplay_split_check();
+                }
+                else{
+                    userplaypane();
+                }
             }
         }
         
@@ -178,9 +215,33 @@ public class MainPane extends Pane
         user_card_new.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
         user_card_new.setY(this.card_Y_loc_user);
         user_card_new.setImage(new Image(idx_2_path()));
-        calc_point(true);
+        calc_point(0);
         System.out.printf("User card<%d\r\n",this.user_point);
         getChildren().add(user_card_new);
+    }
+
+    private void user_add_card(boolean is_aux){
+        this.cur_card_order += 1;
+        if (is_aux){
+            this.user_card_list_aux.add(this.idx_list.get(this.cur_card_order));
+            ImageView user_card_new = new ImageView();
+            user_card_new.setX(this.card_X_loc_aux+this.card_margin*this.user_card_list_aux.size());
+            user_card_new.setY(this.card_Y_loc_user);
+            user_card_new.setImage(new Image(idx_2_path()));
+            calc_point(2);
+            System.out.printf("User card aux<%d\r\n",this.user_point_aux);
+            getChildren().add(user_card_new);
+        }
+        else{
+            this.user_card_list.add(this.idx_list.get(this.cur_card_order));
+            ImageView user_card_new = new ImageView();
+            user_card_new.setX(this.card_X_loc_main+this.card_margin*this.user_card_list.size());
+            user_card_new.setY(this.card_Y_loc_user);
+            user_card_new.setImage(new Image(idx_2_path()));
+            calc_point(0);
+            System.out.printf("User card main<%d\r\n",this.user_point);
+            getChildren().add(user_card_new);
+        }
     }
 
     private void host_add_card(){
@@ -190,9 +251,35 @@ public class MainPane extends Pane
         host_card_new.setX(this.card_X_loc+this.card_margin*this.host_card_list.size());
         host_card_new.setY(this.card_Y_loc_host);
         host_card_new.setImage(new Image(idx_2_path()));
-        calc_point(false);
+        calc_point(1);
         System.out.printf("Host card<%d\r\n",this.host_point);
         getChildren().add(host_card_new);
+    }
+
+    private void userplay_split_check(){
+        if (this.insurance){
+            this.insurance = false;
+            getChildren().remove(getChildren().size()-2, getChildren().size());
+        }
+        this.is_split = true;
+        Button splitbt = new Button("Split");
+        splitbt.setLayoutX(200.0);
+        splitbt.setLayoutY(160.0);
+        splitbt.setOnMouseClicked(e->{
+                this.money -= this.deal;
+                this.deal *= 2;
+                userplaypane_split();
+            }
+        );
+        // Skip Split Button
+        Button skipbt = new Button("Skip");
+        skipbt.setLayoutX(200.0);
+        skipbt.setLayoutY(200.0);
+        skipbt.setOnMouseClicked(e -> {
+                userplaypane();
+            }
+        );
+        getChildren().addAll(splitbt, skipbt);
     }
 
     private void userplaypane(){
@@ -200,7 +287,11 @@ public class MainPane extends Pane
             this.insurance = false;
             getChildren().remove(getChildren().size()-2, getChildren().size());
         }
-        HBox opbox = new HBox(5);
+        if (this.is_split){
+            this.is_split = false;
+            getChildren().remove(getChildren().size()-2, getChildren().size());
+        }
+        HBox opbox = new HBox(4);
         opbox.setAlignment(Pos.BOTTOM_CENTER);
         opbox.setLayoutX(50);
         opbox.setLayoutY(250);
@@ -242,18 +333,125 @@ public class MainPane extends Pane
                 quitpane();
             }
         );
-        Button splitbt = new Button("Split");
-		splitbt.setOnMouseClicked(
-			new EventHandler<MouseEvent>(){
-				@Override
-				public void handle(MouseEvent e){
-                    // Split
-				}
-			}
-        );
-        opbox.getChildren().addAll(doublebt, hitbt, standbt, surrenderbt, splitbt);
+        opbox.getChildren().addAll(doublebt, hitbt, standbt, surrenderbt);
         getChildren().add(opbox);
     }
+
+    private void userplaypane_split(){
+        if (this.is_split){
+            getChildren().remove(getChildren().size()-2, getChildren().size());
+        }
+        
+        // Split the two cards
+        this.user_card_list_aux.add(this.user_card_list.remove(this.user_card_list.size() - 1));
+        // Split img view
+        // aux is on the right
+        this.user_card_right.setX(this.card_X_loc_aux + this.card_margin*this.user_card_list_aux.size()); 
+        this.user_card_left.setX(this.card_X_loc_main + this.card_margin*this.user_card_list.size());
+        // Assign new card to each
+        user_add_card(true);
+        user_add_card(false);
+
+
+        HBox opbox = new HBox(6);
+        opbox.setAlignment(Pos.BOTTOM_CENTER);
+        opbox.setLayoutX(20);
+        opbox.setLayoutY(250);
+        // hit botton
+        Button hitbtmain = new Button("Hit l");
+		hitbtmain.setOnMouseClicked(e->{
+                if (this.user_point > 21){
+                    this.main_bust = true;
+                    System.out.println(" Left card is bust!"); 
+                    if (this.aux_done){
+                        hostplaypane();
+                    }
+                    if (this.aux_bust){
+                        quitpane();
+                    }
+                    if (this.aux_sur){
+                        this.money += (int) this.deal / 4;
+                        quitpane();
+                    }
+                }
+                else{
+                    user_add_card(false);
+                }
+            }
+        );
+        Button standbtmain = new Button("Stand l");
+		standbtmain.setOnMouseClicked(e->{
+                this.main_done = true;
+                if (this.aux_done || this.aux_bust || this.aux_sur){
+                    hostplaypane();
+                }
+            }
+        );
+        Button surrenderbtmain = new Button("Surrender l");
+		surrenderbtmain.setOnMouseClicked(e->{
+                this.main_sur = true;
+                if (this.aux_done){
+                    hostplaypane();
+                }
+                if (this.aux_bust){
+                    this.money += (int) this.deal / 4;
+                    quitpane();
+                }
+                if (this.aux_sur){
+                    this.money += (int) this.deal / 2;
+                    quitpane();
+                }
+            }
+        );
+        Button hitbtaux = new Button("Hit r");
+		hitbtaux.setOnMouseClicked(e->{
+                if (this.user_point_aux > 21){
+                    this.aux_bust = true;
+                    System.out.println(" Right card is bust!"); 
+                    if (this.main_done){
+                        hostplaypane();
+                    }
+                    if (this.main_done){
+                        quitpane();
+                    }
+                    if (this.main_done){
+                        this.money += (int) this.deal / 4;
+                        quitpane();
+                    }
+                }
+                else{
+                    user_add_card(true);
+                }
+            }
+        );
+        Button standbtaux = new Button("Stand r");
+		standbtaux.setOnMouseClicked(e->{
+                this.aux_done = true;
+                if (this.main_done || this.main_bust || this.main_sur){
+                    hostplaypane();
+                }
+            }
+        );
+        Button surrenderbtaux = new Button("Surrender r");
+		surrenderbtaux.setOnMouseClicked(e->{
+                this.aux_sur = true;
+                if (this.main_done){
+                    hostplaypane();
+                }
+                if (this.main_bust){
+                    this.money += (int) this.deal / 4;
+                    quitpane();
+                }
+                if (this.main_sur){
+                    this.money += (int) this.deal / 2;
+                    quitpane();
+                }
+            }
+        );
+        opbox.getChildren().addAll(hitbtmain, standbtmain, surrenderbtmain, hitbtaux, standbtaux, surrenderbtaux);
+        getChildren().add(opbox);
+    }
+
 
     private void hostplaypane(){
         // Hidden card is shown
@@ -264,17 +462,53 @@ public class MainPane extends Pane
         }
 
         if(this.host_point > 21){
-            this.money += 2*this.deal;
-        }
-        else{
-            if(this.user_point > this.host_point){
-                this.money += 2*this.deal;
-            }
-            else if(this.user_point == this.host_point){
-                this.money += this.deal;
+            if (this.is_split){
+                if (this.main_done && this.aux_done){
+                    this.money += 2*this.deal;
+                }
+                else{
+                    this.money += this.deal;
+                }
             }
             else{
-                // lose
+                this.money += 2*this.deal;
+            }
+        }
+        else{
+            if (this.is_split){
+                if (this.main_done){
+                    if(this.user_point > this.host_point){
+                        this.money += this.deal;
+                    }
+                    else if(this.user_point == this.host_point){
+                        this.money += (int) this.deal / 2;
+                    }
+                    else{
+                        // lose
+                    }
+                }
+                if (this.aux_done){
+                    if(this.user_point_aux > this.host_point){
+                        this.money += this.deal;
+                    }
+                    else if(this.user_point_aux == this.host_point){
+                        this.money += (int) this.deal / 2;
+                    }
+                    else{
+                        // lose
+                    }
+                }
+            }
+            else{
+                if(this.user_point > this.host_point){
+                    this.money += 2*this.deal;
+                }
+                else if(this.user_point == this.host_point){
+                    this.money += this.deal;
+                }
+                else{
+                    // lose
+                }
             }
         }
         quitpane();
@@ -312,16 +546,24 @@ public class MainPane extends Pane
         getChildren().addAll(againbt, quitbt);
     }
 
-    private void calc_point(boolean isuser){
+    private void calc_point(int isuser){
         // Calculate point according to the current card list
         int tmp_point_except_aces = 0;
         int aces_number = 0;
         List tmp_list = new ArrayList<Integer>(); 
-        if (isuser){
-            tmp_list = this.user_card_list;
-        }
-        else{
-            tmp_list = this.host_card_list;
+        switch (isuser){
+            case 0:
+                tmp_list = this.user_card_list;
+                break;
+            case 1:
+                tmp_list = this.host_card_list;
+                break;
+            case 2:
+                tmp_list = this.user_card_list_aux;
+                break;
+            default:
+                tmp_list = this.user_card_list;
+                break;
         }
         for (int i=0;i<tmp_list.size();i++){
             int cur_idx = (Integer)tmp_list.get(i);
@@ -339,11 +581,19 @@ public class MainPane extends Pane
                 break;
             }
         }
-        if (isuser){
-            this.user_point = tmp_point;
-        }
-        else{
-            this.host_point = tmp_point;
+        switch (isuser){
+            case 0:
+                this.user_point = tmp_point;
+                break;
+            case 1:
+                this.host_point = tmp_point;
+                break;
+            case 2:
+                this.user_point_aux = tmp_point;
+                break;
+            default:
+                this.user_point = tmp_point;
+                break;
         }
     }
 
