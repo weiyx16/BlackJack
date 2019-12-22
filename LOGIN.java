@@ -4,10 +4,8 @@ import javafx.stage.Stage;
 import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
-// import javafx.scene.paint.Color;
-// import javafx.scene.shape.Rectangle;
-// import java.lang.Math;
 import javafx.scene.control.Button;
+import javafx.scene.image.Image;
 
 public class LOGIN extends Application
 {
@@ -50,6 +48,7 @@ public class LOGIN extends Application
 		Scene loginscene=new Scene(loginpane,400,300);
 		primaryStage.setTitle("BlackJack");
 		primaryStage.setScene(loginscene);
+		primaryStage.getIcons().add(new Image("./card/icon.png"));
 		primaryStage.show();
 	}
 	/** The main method is only needed for the IDE with limited JavaFX support. 
