@@ -22,16 +22,13 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import javafx.scene.control.Alert;
 
-// TODO: Better Interaction
-// ADD money and deal change over the playing process
-// ADD in a Point Hint for each user deck
-// Check previous money and show how much money it win or lose in this game, and also show win/lose/tie in quitpane.
-
+// TODO: Better GUI
 public class MainPane extends Pane 
 {
     // Process related params
     private Stage primaryStage;
     private int money;
+    private int past_money;
     private int deal;
     private List idx_list = new ArrayList<Integer>();
     private int cur_card_order; 
@@ -52,18 +49,21 @@ public class MainPane extends Pane
     private boolean aux_sur = false;
 
     // GUI related params
-    private int card_X_loc = 150;
+    private int card_X_loc = 125;
     private int card_X_loc_main = 50;
     private int card_X_loc_aux = 200;
     private int card_margin = 25;
     private int card_Y_loc_user = 150;
-    private int card_Y_loc_host = 50;
+    private int card_Y_loc_host = 35;
     final private String card_prefix = "./card/";
     final private String card_ext = ".png";
     private ImageView host_card_hidden = new ImageView();
     private ImageView user_card_left = new ImageView();
     private ImageView user_card_right = new ImageView();
-
+    private Label pointhint = new Label();
+    private Label pointhint_aux = new Label();
+    private Label dealhint = new Label();
+    private Label moneyhint = new Label();
     // Log relate params
     private String filePath = "./log.txt";
     private List log = new ArrayList<String>();
@@ -71,12 +71,14 @@ public class MainPane extends Pane
     MainPane(Stage primaryStage){
         this.primaryStage = primaryStage;
         this.money = 2000;
+        this.past_money = 2000;
         init_params();
         init_pane();
     }
 
     private void init_params(){
         this.deal = 1;
+        this.past_money = this.money;
         this.cur_card_order = 0;
         for(int i=1; i<53; i++){  
             this.idx_list.add(i);  
@@ -106,9 +108,15 @@ public class MainPane extends Pane
         this.log.add("-----------------------------");
         this.log.add(sdf.format(date));
 
-        Label dealhint = new Label("Bet: ");
+        this.dealhint.setText("Bet: ");
+        this.dealhint.setLayoutX(20);
+        this.dealhint.setLayoutY(20);
         TextField dealin = new TextField(Integer.toString(this.deal));
-        Label moneyhint = new Label("Money: "+Integer.toString(this.money));
+        dealin.setLayoutX(50);
+        dealin.setLayoutY(20);
+        this.moneyhint.setText("Money: "+Integer.toString(this.money));
+        this.moneyhint.setLayoutX(300);
+        this.moneyhint.setLayoutY(20);
 
         // Help Button
 		Button dealbt = new Button("Deal");
@@ -117,20 +125,19 @@ public class MainPane extends Pane
 		dealbt.setOnMouseClicked(e -> {
                 this.deal = Integer.valueOf(dealin.getText());
                 this.money -= this.deal;
+                update_dealmoney();
                 beginplaypane();
                 this.log.add(">> Bet in: "+Integer.toString(this.deal)+" Left Money: "+Integer.toString(this.money));
             }
         );
         getChildren().clear();
-        getChildren().addAll(dealhint, dealin, moneyhint, dealbt);
+        getChildren().addAll(this.dealhint, this.moneyhint, dealbt, dealin);
         
     }
 
     private void beginplaypane(){
         // Initial necessary show.
-        Label dealhint = new Label("Bet: "+Integer.toString(this.deal));
-        Label moneyhint = new Label("Money: "+Integer.toString(this.money));
-        
+        getChildren().remove(getChildren().size()-2, getChildren().size());
         this.user_card_list.add(this.idx_list.get(this.cur_card_order));
         this.user_card_left.setX(this.card_X_loc+this.card_margin*this.user_card_list.size());
         this.user_card_left.setY(this.card_Y_loc_user);
@@ -157,21 +164,25 @@ public class MainPane extends Pane
 
         calc_point(0);
         System.out.printf("User card<%d\r\n",this.user_point);
+        this.pointhint.setText(String.valueOf(this.user_point));
+        this.pointhint.setLayoutX(200);
+        this.pointhint.setLayoutY(250);
         calc_point(1);
         System.out.printf("Host card<%d\r\n",this.host_point);
         this.log.add("> Initial Card: Host shown card - "+idx_2_chinese((Integer)this.host_card_list.get(0))+" Host hidden card - "+idx_2_chinese((Integer)this.host_card_list.get(1))+", Card Point - "+Integer.toString(this.host_point));
         this.log.add("> Initial Card: User card - "+idx_2_chinese((Integer)this.user_card_list.get(0))+", "+idx_2_chinese((Integer)this.user_card_list.get(1))+", Card Point - "+Integer.toString(this.user_point));
-        getChildren().clear();
-        getChildren().addAll(dealhint, moneyhint, this.user_card_left, this.user_card_right, host_card_left, this.host_card_hidden);
+        getChildren().addAll(this.user_card_left, this.user_card_right, this.pointhint, host_card_left, this.host_card_hidden);
         
         if (this.user_point==21){
             this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
             if (this.host_point==21){
                 this.money += this.deal;
+                update_dealmoney();
                 this.log.add(">> Tie for both BJ, with money left: "+Integer.toString(this.money));
             }
             else{
                 this.money += (int)this.deal*2.5;
+                update_dealmoney();
                 this.log.add(">> User win for User BJ, with money left: "+Integer.toString(this.money));
             }
             quitpane();
@@ -186,9 +197,11 @@ public class MainPane extends Pane
                 insbt.setLayoutY(160.0);
                 insbt.setOnMouseClicked(e -> {
                         this.money -= (int)this.deal/2;
+                        update_dealmoney();
                         this.log.add("> User choose insurance, with money left: "+Integer.toString(this.money));
                         if (this.host_point==21){
                             this.money += this.deal;
+                            update_dealmoney();
                             this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
                             this.log.add(">> User lose for Host BJ, with money left: "+Integer.toString(this.money));
                             quitpane();
@@ -252,6 +265,7 @@ public class MainPane extends Pane
         user_card_new.setImage(new Image(idx_2_path()));
         calc_point(0);
         System.out.printf("User card<%d\r\n",this.user_point);
+        this.pointhint.setText(String.valueOf(this.user_point));
         getChildren().add(user_card_new);
         String tmplog = "> User add a card, for now: ";
         for (Object current_card: this.user_card_list){
@@ -271,6 +285,7 @@ public class MainPane extends Pane
             user_card_new.setY(this.card_Y_loc_user);
             user_card_new.setImage(new Image(idx_2_path()));
             calc_point(2);
+            this.pointhint_aux.setText(String.valueOf(this.user_point_aux));
             System.out.printf("User card aux<%d\r\n",this.user_point_aux);
             getChildren().add(user_card_new);
             String tmplog = "> User AUX Deck add a card, for now: ";
@@ -288,6 +303,7 @@ public class MainPane extends Pane
             user_card_new.setY(this.card_Y_loc_user);
             user_card_new.setImage(new Image(idx_2_path()));
             calc_point(0);
+            this.pointhint.setText(String.valueOf(this.user_point));
             System.out.printf("User card main<%d\r\n",this.user_point);
             getChildren().add(user_card_new);
             String tmplog = "> User MAIN Deck add a card, for now: ";
@@ -331,6 +347,7 @@ public class MainPane extends Pane
         splitbt.setOnMouseClicked(e->{
                 this.money -= this.deal;
                 this.deal *= 2;
+                update_dealmoney();
                 this.log.add("> User Choose Split Cards, with money left: "+Integer.toString(this.money)+" and deal doubled: "+Integer.toString(this.deal));
                 userplaypane_split();
             }
@@ -358,13 +375,14 @@ public class MainPane extends Pane
         }
         HBox opbox = new HBox(4);
         opbox.setAlignment(Pos.BOTTOM_CENTER);
-        opbox.setLayoutX(50);
-        opbox.setLayoutY(250);
+        opbox.setLayoutX(100);
+        opbox.setLayoutY(270);
         // Double Button
 		Button doublebt = new Button("Double");
 		doublebt.setOnMouseClicked(e->{
                 this.money -= this.deal;
                 this.deal *= 2;
+                update_dealmoney();
                 this.log.add("> User Choose Double, with money left: "+Integer.toString(this.money)+" and deal doubled: "+Integer.toString(this.deal));
                 user_add_card();
                 if (this.user_point > 21){
@@ -395,6 +413,7 @@ public class MainPane extends Pane
         Button surrenderbt = new Button("Surrender");
 		surrenderbt.setOnMouseClicked(e->{
                 this.money += this.deal/2;
+                update_dealmoney();
                 this.log.add(">> User lose for User Surrendered, with money left: "+Integer.toString(this.money));
                 quitpane();
             }
@@ -414,6 +433,11 @@ public class MainPane extends Pane
         // aux is on the right
         this.user_card_right.setX(this.card_X_loc_aux + this.card_margin*this.user_card_list_aux.size()); 
         this.user_card_left.setX(this.card_X_loc_main + this.card_margin*this.user_card_list.size());
+        // Split point hint
+        this.pointhint.setLayoutX(100);
+        this.pointhint.setLayoutY(250);
+        this.pointhint_aux.setLayoutX(250);
+        this.pointhint_aux.setLayoutY(250);
         // Assign new card to each
         this.log.add("> Automatically assign new cards to AUX Deck");
         user_add_card(true);
@@ -424,9 +448,9 @@ public class MainPane extends Pane
         HBox opbox = new HBox(6);
         opbox.setAlignment(Pos.BOTTOM_CENTER);
         opbox.setLayoutX(20);
-        opbox.setLayoutY(250);
+        opbox.setLayoutY(270);
         // hit botton
-        Button hitbtmain = new Button("Hit l");
+        Button hitbtmain = new Button("Hit L");
 		hitbtmain.setOnMouseClicked(e->{
                 if (this.user_point > 21){
                     this.main_bust = true;
@@ -451,6 +475,7 @@ public class MainPane extends Pane
                         }
                         if (this.aux_sur){
                             this.money += (int) this.deal / 4;
+                            update_dealmoney();
                             this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
                             quitpane();
                         }
@@ -458,33 +483,45 @@ public class MainPane extends Pane
                 }
             }
         );
-        Button standbtmain = new Button("Stand l");
+        Button standbtmain = new Button("Stand L");
 		standbtmain.setOnMouseClicked(e->{
-                this.main_done = true;
-                if (this.aux_done || this.aux_bust || this.aux_sur){
-                    hostplaypane();
+                if (this.user_point>21){
+                    Alert alert = new Alert(AlertType.WARNING);
+                    alert.titleProperty().set("WARNING");
+                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to Stand Anymore");
+                    alert.showAndWait();
+                }
+                else{
+                    this.main_done = true;
+                    this.log.add(">.. User Stand for MAIN Deck");
+                    if (this.aux_done || this.aux_bust || this.aux_sur){
+                        hostplaypane();
+                    }
                 }
             }
         );
-        Button surrenderbtmain = new Button("Surrender l");
+        Button surrenderbtmain = new Button("Surrend L");
 		surrenderbtmain.setOnMouseClicked(e->{
                 this.main_sur = true;
+                this.log.add(">.. User Surrender for MAIN Deck");
                 if (this.aux_done){
                     hostplaypane();
                 }
                 if (this.aux_bust){
-                    this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
                     this.money += (int) this.deal / 4;
+                    update_dealmoney();
+                    this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
                     quitpane();
                 }
                 if (this.aux_sur){
-                    this.log.add(">> User Lose for two Decks Surrender, with money left: "+Integer.toString(this.money));
                     this.money += (int) this.deal / 2;
+                    update_dealmoney();
+                    this.log.add(">> User Lose for two Decks Surrender, with money left: "+Integer.toString(this.money));
                     quitpane();
                 }
             }
         );
-        Button hitbtaux = new Button("Hit r");
+        Button hitbtaux = new Button("Hit R");
 		hitbtaux.setOnMouseClicked(e->{
                 if (this.user_point_aux > 21){
                     this.aux_bust = true;
@@ -509,6 +546,7 @@ public class MainPane extends Pane
                         }
                         if (this.main_sur){
                             this.money += (int) this.deal / 4;
+                            update_dealmoney();
                             this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
                             quitpane();
                         }
@@ -516,36 +554,55 @@ public class MainPane extends Pane
                 }
             }
         );
-        Button standbtaux = new Button("Stand r");
+        Button standbtaux = new Button("Stand R");
 		standbtaux.setOnMouseClicked(e->{
-                this.aux_done = true;
-                if (this.main_done || this.main_bust || this.main_sur){
-                    hostplaypane();
+                if (this.user_point_aux>21){
+                    Alert alert = new Alert(AlertType.WARNING);
+                    alert.titleProperty().set("WARNING");
+                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to Stand Anymore");
+                    alert.showAndWait();
+                }
+                else{
+                    this.aux_done = true;
+                    this.log.add(">.. User Stand for AUX Deck");
+                    if (this.main_done || this.main_bust || this.main_sur){
+                        hostplaypane();
+                    }
                 }
             }
         );
-        Button surrenderbtaux = new Button("Surrender r");
+        Button surrenderbtaux = new Button("Surrend R");
 		surrenderbtaux.setOnMouseClicked(e->{
-                this.aux_sur = true;
-                if (this.main_done){
-                    hostplaypane();
+                if (this.user_point_aux>21){
+                    Alert alert = new Alert(AlertType.WARNING);
+                    alert.titleProperty().set("WARNING");
+                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to Surrender Anymore");
+                    alert.showAndWait();
                 }
-                if (this.main_bust){
-                    this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
-                    this.money += (int) this.deal / 4;
-                    quitpane();
-                }
-                if (this.main_sur){
-                    this.log.add(">> User Lose for two Decks Surrender, with money left: "+Integer.toString(this.money));
-                    this.money += (int) this.deal / 2;
-                    quitpane();
+                else{
+                    this.aux_sur = true;
+                    this.log.add(">.. User Surrender for AUX Deck");
+                    if (this.main_done){
+                        hostplaypane();
+                    }
+                    if (this.main_bust){
+                        this.money += (int) this.deal / 4;
+                        update_dealmoney();
+                        this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
+                        quitpane();
+                    }
+                    if (this.main_sur){
+                        this.money += (int) this.deal / 2;
+                        update_dealmoney();
+                        this.log.add(">> User Lose for two Decks Surrender, with money left: "+Integer.toString(this.money));
+                        quitpane();
+                    }
                 }
             }
         );
         opbox.getChildren().addAll(hitbtmain, standbtmain, surrenderbtmain, hitbtaux, standbtaux, surrenderbtaux);
-        getChildren().add(opbox);
+        getChildren().addAll(opbox, this.pointhint_aux);
     }
-
 
     private void hostplaypane(){
         // Hidden card is shown
@@ -559,17 +616,20 @@ public class MainPane extends Pane
         if(this.host_point > 21){
             if (this.is_split){
                 if (this.main_done && this.aux_done){
-                    this.log.add(">.. User Win for Host Bust, with money left: "+Integer.toString(this.money));
                     this.money += 2*this.deal;
+                    update_dealmoney();
+                    this.log.add(">.. User Win for Host Bust, with money left: "+Integer.toString(this.money));
                 }
                 else{
-                    this.log.add(">.. User Win for Host Bust, with money left: "+Integer.toString(this.money));
                     this.money += this.deal;
+                    update_dealmoney();
+                    this.log.add(">.. User Win for Host Bust, with money left: "+Integer.toString(this.money));
                 }
                 this.log.add(">> For Split, the final user money is: "+Integer.toString(this.money));
             }
             else{
                 this.money += 2*this.deal;
+                update_dealmoney();
                 this.log.add(">> User win for Host Bust, with money left: "+Integer.toString(this.money));
             }
         }
@@ -577,12 +637,14 @@ public class MainPane extends Pane
             if (this.is_split){
                 if (this.main_done){
                     if(this.user_point > this.host_point){
-                        this.log.add(">.. User win on MAIN Deck for User:Host="+Integer.toString(this.user_point)+":"+Integer.toString(this.host_point)+", with money left: "+Integer.toString(this.money));
                         this.money += this.deal;
+                        update_dealmoney();
+                        this.log.add(">.. User win on MAIN Deck for User:Host="+Integer.toString(this.user_point)+":"+Integer.toString(this.host_point)+", with money left: "+Integer.toString(this.money));
                     }
                     else if(this.user_point == this.host_point){
-                        this.log.add(">.. Tie on MAIN Deck for same point, with money left: "+Integer.toString(this.money));
                         this.money += (int) this.deal / 2;
+                        update_dealmoney();
+                        this.log.add(">.. Tie on MAIN Deck for same point, with money left: "+Integer.toString(this.money));
                     }
                     else{
                         // lose
@@ -591,12 +653,14 @@ public class MainPane extends Pane
                 }
                 if (this.aux_done){
                     if(this.user_point_aux > this.host_point){
-                        this.log.add(">.. User win on AUX Deck for User:Host="+Integer.toString(this.user_point_aux)+":"+Integer.toString(this.host_point)+", with money left: "+Integer.toString(this.money));
                         this.money += this.deal;
+                        update_dealmoney();
+                        this.log.add(">.. User win on AUX Deck for User:Host="+Integer.toString(this.user_point_aux)+":"+Integer.toString(this.host_point)+", with money left: "+Integer.toString(this.money));
                     }
                     else if(this.user_point_aux == this.host_point){
-                        this.log.add(">.. Tie on AUX Deck for same point, with money left: "+Integer.toString(this.money));
                         this.money += (int) this.deal / 2;
+                        update_dealmoney();
+                        this.log.add(">.. Tie on AUX Deck for same point, with money left: "+Integer.toString(this.money));
                     }
                     else{
                         // lose
@@ -608,10 +672,12 @@ public class MainPane extends Pane
             else{
                 if(this.user_point > this.host_point){
                     this.money += 2*this.deal;
+                    update_dealmoney();
                     this.log.add(">> User win for User:Host="+Integer.toString(this.user_point)+":"+Integer.toString(this.host_point)+", with money left: "+Integer.toString(this.money));
                 }
                 else if(this.user_point == this.host_point){
                     this.money += this.deal;
+                    update_dealmoney();
                     this.log.add(">> Tie for same point, with money left: "+Integer.toString(this.money));
                 }
                 else{
@@ -629,6 +695,27 @@ public class MainPane extends Pane
             this.insurance = false;
             getChildren().remove(getChildren().size()-2, getChildren().size());
         }
+
+        int gain = this.money - this.past_money;
+        Label gainlabel = new Label();
+        Label resultlabel = new Label();
+        gainlabel.setLayoutX(300);
+        gainlabel.setLayoutY(40);
+        resultlabel.setLayoutX(200);
+        resultlabel.setLayoutY(100);
+        if (gain > 0){
+            gainlabel.setText("+ "+String.valueOf(gain));
+            resultlabel.setText(" You Win! ");
+        }
+        else if (gain == 0){
+            gainlabel.setText(" Hold on ");
+            resultlabel.setText(" A Tie! ");
+        }
+        else{
+            gainlabel.setText(" "+String.valueOf(gain));
+            resultlabel.setText(" You Lose! ");
+        }
+
         // Again Button
 		Button againbt = new Button("Again");
 		againbt.setLayoutX(200.0);
@@ -652,7 +739,7 @@ public class MainPane extends Pane
             }
         );
         
-        getChildren().addAll(againbt, quitbt);
+        getChildren().addAll(resultlabel, gainlabel, againbt, quitbt);
     }
 
     private void calc_point(int isuser){
@@ -753,6 +840,11 @@ public class MainPane extends Pane
             card_CN = "Club"+"["+card_CN+"]";
         }
         return card_CN;
+    }
+
+    private void update_dealmoney(){
+        this.dealhint.setText("Bet: "+Integer.toString(this.deal));
+        this.moneyhint.setText("Money: "+Integer.toString(this.money));
     }
 
     private void save_log(){
