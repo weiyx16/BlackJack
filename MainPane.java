@@ -21,8 +21,17 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import javafx.scene.control.Alert;
+import javafx.scene.layout.BackgroundImage;
+import javafx.scene.layout.BackgroundSize;
+import javafx.scene.layout.BackgroundPosition;
+import javafx.scene.layout.BackgroundRepeat;
+import javafx.scene.layout.Background;
+import javafx.scene.media.*;
+import javafx.scene.media.MediaPlayer.Status;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.paint.Color;
 
-// TODO: Better GUI
 public class MainPane extends Pane 
 {
     // Process related params
@@ -52,7 +61,8 @@ public class MainPane extends Pane
     private int card_X_loc = 125;
     private int card_X_loc_main = 50;
     private int card_X_loc_aux = 200;
-    private int card_margin = 25;
+    private int card_margin = 20;
+    private int card_margin_aux = 18;
     private int card_Y_loc_user = 150;
     private int card_Y_loc_host = 35;
     final private String card_prefix = "./card/";
@@ -64,6 +74,9 @@ public class MainPane extends Pane
     private Label pointhint_aux = new Label();
     private Label dealhint = new Label();
     private Label moneyhint = new Label();
+    private File bgmusic = new File("card\\bgMusic.wav");
+    private MediaPlayer mp1 = new MediaPlayer(new Media(bgmusic.toURI().toString()));
+    private MediaView mView = new MediaView(this.mp1);
     // Log relate params
     private String filePath = "./log.txt";
     private List log = new ArrayList<String>();
@@ -72,12 +85,21 @@ public class MainPane extends Pane
         this.primaryStage = primaryStage;
         this.money = 2000;
         this.past_money = 2000;
+        BackgroundImage myBI= new BackgroundImage(new Image("./card/PLAYBG.jpg",400,300,false,true),BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT,BackgroundSize.DEFAULT);
+        Background myBG = new Background(myBI);
+        setBackground(myBG);
+        this.mp1.setCycleCount(MediaPlayer.INDEFINITE);
+        this.mp1.play();
+        this.pointhint.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+        this.pointhint.setTextFill(Color.WHEAT);
+        this.pointhint_aux.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		this.pointhint_aux.setTextFill(Color.WHEAT);
         init_params();
         init_pane();
     }
 
     private void init_params(){
-        this.deal = 1;
+        this.deal = 2;
         this.past_money = this.money;
         this.cur_card_order = 0;
         for(int i=1; i<53; i++){  
@@ -109,19 +131,27 @@ public class MainPane extends Pane
         this.log.add(sdf.format(date));
 
         this.dealhint.setText("Bet: ");
+        this.dealhint.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+		this.dealhint.setTextFill(Color.WHEAT);
         this.dealhint.setLayoutX(20);
         this.dealhint.setLayoutY(20);
         TextField dealin = new TextField(Integer.toString(this.deal));
         dealin.setLayoutX(50);
-        dealin.setLayoutY(20);
+        dealin.setLayoutY(18);
+        dealin.setFont(Font.font("Agency FB",FontWeight.BOLD, 14));
+        // dealin.setMaxSize(dealin.getWidth()/2, dealin.getHeight());
         this.moneyhint.setText("Money: "+Integer.toString(this.money));
+        this.moneyhint.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+		this.moneyhint.setTextFill(Color.WHEAT);
         this.moneyhint.setLayoutX(300);
         this.moneyhint.setLayoutY(20);
 
         // Help Button
-		Button dealbt = new Button("Deal");
-		dealbt.setLayoutX(350.0);
-		dealbt.setLayoutY(250.0);
+        Button dealbt = new Button("Deal");
+        dealbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+		dealbt.setTextFill(new Color(0,0,0,1));
+		dealbt.setLayoutX(183.0);
+		dealbt.setLayoutY(200.0);
 		dealbt.setOnMouseClicked(e -> {
                 this.deal = Integer.valueOf(dealin.getText());
                 this.money -= this.deal;
@@ -131,7 +161,23 @@ public class MainPane extends Pane
             }
         );
         getChildren().clear();
-        getChildren().addAll(this.dealhint, this.moneyhint, dealbt, dealin);
+        
+        // Quiet Button
+        ImageView quietbt = new ImageView(new Image("./card/voice.png",16,16,false,true));
+		quietbt.setLayoutX(10.0);
+		quietbt.setLayoutY(275.0);
+		quietbt.setOnMouseClicked(e -> {
+                if (this.mp1.getStatus() == Status.PAUSED){
+                    this.mp1.play();
+                    quietbt.setImage(new Image("./card/voice.png",16,16,false,true));
+                }
+                if (this.mp1.getStatus() == Status.PLAYING){
+                    this.mp1.pause();
+                    quietbt.setImage(new Image("./card/quiet.png",16,16,false,true));
+                }
+            }
+        );
+        getChildren().addAll(this.dealhint, this.moneyhint, this.mView, quietbt, dealbt, dealin);
         
     }
 
@@ -163,18 +209,17 @@ public class MainPane extends Pane
         this.host_card_hidden.setY(this.card_Y_loc_host);
 
         calc_point(0);
-        System.out.printf("User card<%d\r\n",this.user_point);
         this.pointhint.setText(String.valueOf(this.user_point));
         this.pointhint.setLayoutX(200);
         this.pointhint.setLayoutY(250);
         calc_point(1);
-        System.out.printf("Host card<%d\r\n",this.host_point);
         this.log.add("> Initial Card: Host shown card - "+idx_2_chinese((Integer)this.host_card_list.get(0))+" Host hidden card - "+idx_2_chinese((Integer)this.host_card_list.get(1))+", Card Point - "+Integer.toString(this.host_point));
         this.log.add("> Initial Card: User card - "+idx_2_chinese((Integer)this.user_card_list.get(0))+", "+idx_2_chinese((Integer)this.user_card_list.get(1))+", Card Point - "+Integer.toString(this.user_point));
         getChildren().addAll(this.user_card_left, this.user_card_right, this.pointhint, host_card_left, this.host_card_hidden);
         
         if (this.user_point==21){
             this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
+            pause_half_sec();
             if (this.host_point==21){
                 this.money += this.deal;
                 update_dealmoney();
@@ -193,7 +238,9 @@ public class MainPane extends Pane
                 this.insurance = true;
                 // Insurance Button
                 Button insbt = new Button("Insurance");
-                insbt.setLayoutX(200.0);
+                insbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+                insbt.setTextFill(new Color(0,0,0,1));
+                insbt.setLayoutX(170.0);
                 insbt.setLayoutY(160.0);
                 insbt.setOnMouseClicked(e -> {
                         this.money -= (int)this.deal/2;
@@ -218,7 +265,9 @@ public class MainPane extends Pane
                 );
                 // Skip Insurance Button
                 Button skipbt = new Button("Skip");
-                skipbt.setLayoutX(200.0);
+                skipbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+                skipbt.setTextFill(new Color(0,0,0,1));
+                skipbt.setLayoutX(183.0);
                 skipbt.setLayoutY(200.0);
                 skipbt.setOnMouseClicked(e -> {
                     this.log.add("> User skip insurance");
@@ -264,7 +313,6 @@ public class MainPane extends Pane
         user_card_new.setY(this.card_Y_loc_user);
         user_card_new.setImage(new Image(idx_2_path()));
         calc_point(0);
-        System.out.printf("User card<%d\r\n",this.user_point);
         this.pointhint.setText(String.valueOf(this.user_point));
         getChildren().add(user_card_new);
         String tmplog = "> User add a card, for now: ";
@@ -281,12 +329,11 @@ public class MainPane extends Pane
         if (is_aux){
             this.user_card_list_aux.add(this.idx_list.get(this.cur_card_order));
             ImageView user_card_new = new ImageView();
-            user_card_new.setX(this.card_X_loc_aux+this.card_margin*this.user_card_list_aux.size());
+            user_card_new.setX(this.card_X_loc_aux+this.card_margin_aux*this.user_card_list_aux.size());
             user_card_new.setY(this.card_Y_loc_user);
             user_card_new.setImage(new Image(idx_2_path()));
             calc_point(2);
             this.pointhint_aux.setText(String.valueOf(this.user_point_aux));
-            System.out.printf("User card aux<%d\r\n",this.user_point_aux);
             getChildren().add(user_card_new);
             String tmplog = "> User AUX Deck add a card, for now: ";
             for (Object current_card: this.user_card_list_aux){
@@ -299,12 +346,11 @@ public class MainPane extends Pane
         else{
             this.user_card_list.add(this.idx_list.get(this.cur_card_order));
             ImageView user_card_new = new ImageView();
-            user_card_new.setX(this.card_X_loc_main+this.card_margin*this.user_card_list.size());
+            user_card_new.setX(this.card_X_loc_main+this.card_margin_aux*this.user_card_list.size());
             user_card_new.setY(this.card_Y_loc_user);
             user_card_new.setImage(new Image(idx_2_path()));
             calc_point(0);
             this.pointhint.setText(String.valueOf(this.user_point));
-            System.out.printf("User card main<%d\r\n",this.user_point);
             getChildren().add(user_card_new);
             String tmplog = "> User MAIN Deck add a card, for now: ";
             for (Object current_card: this.user_card_list){
@@ -324,7 +370,6 @@ public class MainPane extends Pane
         host_card_new.setY(this.card_Y_loc_host);
         host_card_new.setImage(new Image(idx_2_path()));
         calc_point(1);
-        System.out.printf("Host card<%d\r\n",this.host_point);
         getChildren().add(host_card_new);
         String tmplog = "> Host add a card, for now: ";
         for (Object current_card: this.host_card_list){
@@ -342,7 +387,9 @@ public class MainPane extends Pane
         }
         this.is_split = true;
         Button splitbt = new Button("Split");
-        splitbt.setLayoutX(200.0);
+        splitbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+		splitbt.setTextFill(new Color(0,0,0,1));
+        splitbt.setLayoutX(180.0);
         splitbt.setLayoutY(160.0);
         splitbt.setOnMouseClicked(e->{
                 this.money -= this.deal;
@@ -354,7 +401,9 @@ public class MainPane extends Pane
         );
         // Skip Split Button
         Button skipbt = new Button("Skip");
-        skipbt.setLayoutX(200.0);
+        skipbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+		skipbt.setTextFill(new Color(0,0,0,1));
+        skipbt.setLayoutX(183.0);
         skipbt.setLayoutY(200.0);
         skipbt.setOnMouseClicked(e -> {
                 this.log.add("> User Skip Split Cards, with money left: "+Integer.toString(this.money)+" and deal doubled: "+Integer.toString(this.deal));
@@ -378,26 +427,41 @@ public class MainPane extends Pane
         opbox.setLayoutX(100);
         opbox.setLayoutY(270);
         // Double Button
-		Button doublebt = new Button("Double");
+        Button doublebt = new Button("Double");
+        doublebt.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		doublebt.setTextFill(new Color(0,0,0,1));
 		doublebt.setOnMouseClicked(e->{
-                this.money -= this.deal;
-                this.deal *= 2;
-                update_dealmoney();
-                this.log.add("> User Choose Double, with money left: "+Integer.toString(this.money)+" and deal doubled: "+Integer.toString(this.deal));
-                user_add_card();
-                if (this.user_point > 21){
-                    this.log.add(">> User lose for User Bust, with money left: "+Integer.toString(this.money));
-                    quitpane();
+                if (this.user_card_list.size() == 2){
+                    this.money -= this.deal;
+                    this.deal *= 2;
+                    update_dealmoney();
+                    this.log.add("> User Choose Double, with money left: "+Integer.toString(this.money)+" and deal doubled: "+Integer.toString(this.deal));
+                    user_add_card();
+                    if (this.user_point > 21){
+                        this.log.add(">> User lose for User Bust, with money left: "+Integer.toString(this.money));
+                        quitpane();
+                    }
+                    else{
+                        hostplaypane();
+                    }
                 }
                 else{
-                    hostplaypane();
+                    Alert alert = new Alert(AlertType.WARNING);
+                    alert.titleProperty().set("WARNING");
+                    alert.headerTextProperty().set("You can only double at the beginning");
+                    alert.showAndWait();
                 }
             }
         );
         Button hitbt = new Button("Hit me");
+        hitbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		hitbt.setTextFill(new Color(0,0,0,1));
 		hitbt.setOnMouseClicked(e->{
                 this.log.add("> User Choose Hit me");
                 user_add_card();
+                // can't double after hit once.
+                doublebt.setGraphic(new ImageView(new Image("./card/forbid.png",16,16,false,true)));
+                doublebt.setText(null);
                 if (this.user_point > 21){
                     this.log.add(">> User lose for User Bust, with money left: "+Integer.toString(this.money));
                     quitpane();
@@ -405,12 +469,16 @@ public class MainPane extends Pane
             }
         );
         Button standbt = new Button("Stand");
+        standbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		standbt.setTextFill(new Color(0,0,0,1));
 		standbt.setOnMouseClicked(e->{
                 this.log.add("> User Choose Stand");
                 hostplaypane();
             }
         );
         Button surrenderbt = new Button("Surrender");
+        surrenderbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		surrenderbt.setTextFill(new Color(0,0,0,1));
 		surrenderbt.setOnMouseClicked(e->{
                 this.money += this.deal/2;
                 update_dealmoney();
@@ -447,14 +515,57 @@ public class MainPane extends Pane
 
         HBox opbox = new HBox(6);
         opbox.setAlignment(Pos.BOTTOM_CENTER);
-        opbox.setLayoutX(20);
+        opbox.setLayoutX(50);
         opbox.setLayoutY(270);
+        Button standbtmain = new Button("Stand L");
+        standbtmain.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		standbtmain.setTextFill(new Color(0,0,0,1));
+		standbtmain.setOnMouseClicked(e->{
+                if (this.user_point>21){
+                    Alert alert = new Alert(AlertType.WARNING);
+                    alert.titleProperty().set("WARNING");
+                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to Stand Anymore");
+                    alert.showAndWait();
+                }
+                else{
+                    this.main_done = true;
+                    this.log.add(">.. User Stand for MAIN Deck");
+                    if (this.aux_done || this.aux_bust || this.aux_sur){
+                        hostplaypane();
+                    }
+                }
+            }
+        );
+        Button surrenderbtmain = new Button("Surrend L");
+        surrenderbtmain.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		surrenderbtmain.setTextFill(new Color(0,0,0,1));
+		surrenderbtmain.setOnMouseClicked(e->{
+                this.main_sur = true;
+                this.log.add(">.. User Surrender for MAIN Deck");
+                if (this.aux_done){
+                    hostplaypane();
+                }
+                if (this.aux_bust){
+                    this.money += (int) this.deal / 4;
+                    update_dealmoney();
+                    this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
+                    quitpane();
+                }
+                if (this.aux_sur){
+                    this.money += (int) this.deal / 2;
+                    update_dealmoney();
+                    this.log.add(">> User Lose for two Decks Surrender, with money left: "+Integer.toString(this.money));
+                    quitpane();
+                }
+            }
+        );
         // hit botton
         Button hitbtmain = new Button("Hit L");
-		hitbtmain.setOnMouseClicked(e->{
+        hitbtmain.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+        hitbtmain.setTextFill(new Color(0,0,0,1));
+        hitbtmain.setOnMouseClicked(e->{
                 if (this.user_point > 21){
                     this.main_bust = true;
-                    System.out.println(" Left card is bust!");
                     Alert alert = new Alert(AlertType.WARNING);
                     alert.titleProperty().set("WARNING");
                     alert.headerTextProperty().set("The deck you chose have busted, you can't choose to HIT ME");
@@ -479,82 +590,19 @@ public class MainPane extends Pane
                             this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
                             quitpane();
                         }
-                    }
-                }
-            }
-        );
-        Button standbtmain = new Button("Stand L");
-		standbtmain.setOnMouseClicked(e->{
-                if (this.user_point>21){
-                    Alert alert = new Alert(AlertType.WARNING);
-                    alert.titleProperty().set("WARNING");
-                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to Stand Anymore");
-                    alert.showAndWait();
-                }
-                else{
-                    this.main_done = true;
-                    this.log.add(">.. User Stand for MAIN Deck");
-                    if (this.aux_done || this.aux_bust || this.aux_sur){
-                        hostplaypane();
-                    }
-                }
-            }
-        );
-        Button surrenderbtmain = new Button("Surrend L");
-		surrenderbtmain.setOnMouseClicked(e->{
-                this.main_sur = true;
-                this.log.add(">.. User Surrender for MAIN Deck");
-                if (this.aux_done){
-                    hostplaypane();
-                }
-                if (this.aux_bust){
-                    this.money += (int) this.deal / 4;
-                    update_dealmoney();
-                    this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
-                    quitpane();
-                }
-                if (this.aux_sur){
-                    this.money += (int) this.deal / 2;
-                    update_dealmoney();
-                    this.log.add(">> User Lose for two Decks Surrender, with money left: "+Integer.toString(this.money));
-                    quitpane();
-                }
-            }
-        );
-        Button hitbtaux = new Button("Hit R");
-		hitbtaux.setOnMouseClicked(e->{
-                if (this.user_point_aux > 21){
-                    this.aux_bust = true;
-                    System.out.println(" Right card is bust!"); 
-                    Alert alert = new Alert(AlertType.WARNING);
-                    alert.titleProperty().set("WARNING");
-                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to HIT ME");
-                    alert.showAndWait();
-                }
-                else{
-                    this.log.add("> User Choose Hit me for AUX Deck");
-                    user_add_card(true);
-                    if (this.user_point_aux > 21){
-                        this.log.add(">.. User AUX Deck Bust with point: "+Integer.toString(this.user_point_aux));
-                        this.aux_bust = true;
-                        if (this.main_done){
-                            hostplaypane();
-                        }
-                        if (this.main_bust){
-                            this.log.add(">> User Lose for both Decks Bust, with money left: "+Integer.toString(this.money));
-                            quitpane();
-                        }
-                        if (this.main_sur){
-                            this.money += (int) this.deal / 4;
-                            update_dealmoney();
-                            this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
-                            quitpane();
-                        }
+                        hitbtmain.setGraphic(new ImageView(new Image("./card/forbid.png",16,16,false,true)));
+                        hitbtmain.setText(null);
+                        surrenderbtmain.setGraphic(new ImageView(new Image("./card/forbid.png",16,16,false,true)));
+                        surrenderbtmain.setText(null);
+                        standbtmain.setGraphic(new ImageView(new Image("./card/forbid.png",16,16,false,true)));
+                        standbtmain.setText(null);
                     }
                 }
             }
         );
         Button standbtaux = new Button("Stand R");
+        standbtaux.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		standbtaux.setTextFill(new Color(0,0,0,1));
 		standbtaux.setOnMouseClicked(e->{
                 if (this.user_point_aux>21){
                     Alert alert = new Alert(AlertType.WARNING);
@@ -572,6 +620,8 @@ public class MainPane extends Pane
             }
         );
         Button surrenderbtaux = new Button("Surrend R");
+        surrenderbtaux.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		surrenderbtaux.setTextFill(new Color(0,0,0,1));
 		surrenderbtaux.setOnMouseClicked(e->{
                 if (this.user_point_aux>21){
                     Alert alert = new Alert(AlertType.WARNING);
@@ -600,6 +650,46 @@ public class MainPane extends Pane
                 }
             }
         );
+        Button hitbtaux = new Button("Hit R");
+        hitbtaux.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
+		hitbtaux.setTextFill(new Color(0,0,0,1));
+		hitbtaux.setOnMouseClicked(e->{
+                if (this.user_point_aux > 21){
+                    this.aux_bust = true; 
+                    Alert alert = new Alert(AlertType.WARNING);
+                    alert.titleProperty().set("WARNING");
+                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to HIT ME");
+                    alert.showAndWait();
+                }
+                else{
+                    this.log.add("> User Choose Hit me for AUX Deck");
+                    user_add_card(true);
+                    if (this.user_point_aux > 21){
+                        this.log.add(">.. User AUX Deck Bust with point: "+Integer.toString(this.user_point_aux));
+                        this.aux_bust = true;
+                        if (this.main_done){
+                            hostplaypane();
+                        }
+                        if (this.main_bust){
+                            this.log.add(">> User Lose for both Decks Bust, with money left: "+Integer.toString(this.money));
+                            quitpane();
+                        }
+                        if (this.main_sur){
+                            this.money += (int) this.deal / 4;
+                            update_dealmoney();
+                            this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
+                            quitpane();
+                        }
+                        hitbtaux.setGraphic(new ImageView(new Image("./card/forbid.png",16,16,false,true)));
+                        hitbtaux.setText(null);
+                        surrenderbtaux.setGraphic(new ImageView(new Image("./card/forbid.png",16,16,false,true)));
+                        surrenderbtaux.setText(null);
+                        standbtaux.setGraphic(new ImageView(new Image("./card/forbid.png",16,16,false,true)));
+                        standbtaux.setText(null);
+                    }
+                }
+            }
+        );
         opbox.getChildren().addAll(hitbtmain, standbtmain, surrenderbtmain, hitbtaux, standbtaux, surrenderbtaux);
         getChildren().addAll(opbox, this.pointhint_aux);
     }
@@ -610,6 +700,7 @@ public class MainPane extends Pane
 
         this.log.add("> Host playing");
         while (this.host_point < 17){
+            pause_half_sec();
             host_add_card();
         }
 
@@ -698,11 +789,15 @@ public class MainPane extends Pane
 
         int gain = this.money - this.past_money;
         Label gainlabel = new Label();
+        gainlabel.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+		gainlabel.setTextFill(Color.GOLD);
         Label resultlabel = new Label();
-        gainlabel.setLayoutX(300);
+        resultlabel.setFont(Font.font("Agency FB",FontWeight.BOLD, 32));
+		resultlabel.setTextFill(Color.BLACK);
+        gainlabel.setLayoutX(350);
         gainlabel.setLayoutY(40);
-        resultlabel.setLayoutX(200);
-        resultlabel.setLayoutY(100);
+        resultlabel.setLayoutX(160);
+        resultlabel.setLayoutY(80);
         if (gain > 0){
             gainlabel.setText("+ "+String.valueOf(gain));
             resultlabel.setText(" You Win! ");
@@ -717,8 +812,10 @@ public class MainPane extends Pane
         }
 
         // Again Button
-		Button againbt = new Button("Again");
-		againbt.setLayoutX(200.0);
+        Button againbt = new Button("Again");
+        againbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+		againbt.setTextFill(new Color(0,0,0,1));
+		againbt.setLayoutX(180.0);
 		againbt.setLayoutY(160.0);
 		againbt.setOnMouseClicked(e->{
                 this.log.add(">> User choose to play game again");
@@ -729,8 +826,10 @@ public class MainPane extends Pane
 		);
 
 		// Quit Button
-		Button quitbt = new Button("Quit");
-		quitbt.setLayoutX(200.0);
+        Button quitbt = new Button("Quit");
+        quitbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
+		quitbt.setTextFill(new Color(0,0,0,1));
+		quitbt.setLayoutX(183.0);
 		quitbt.setLayoutY(200.0);
 		quitbt.setOnMouseClicked(e->{
                 this.log.add(">> User choose to quit the game");
@@ -847,6 +946,14 @@ public class MainPane extends Pane
         this.moneyhint.setText("Money: "+Integer.toString(this.money));
     }
 
+    private void pause_half_sec(){
+        try{
+            Thread.sleep(500);
+        }
+        catch(Exception e){
+            System.exit(0);
+        }
+    }
     private void save_log(){
         try{
             File file = new File(this.filePath);
