@@ -4,15 +4,11 @@ import javafx.scene.layout.Pane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Label;
-import javafx.event.EventHandler;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.control.Button;
 import java.util.ArrayList;  
 import java.util.Collections;  
 import java.util.List; 
 import javafx.stage.Stage;
-import javafx.scene.Scene;
-import javafx.scene.chart.Axis;
 import javafx.geometry.Pos;
 import javafx.scene.layout.HBox;
 import java.util.Date;
@@ -151,9 +147,12 @@ public class MainPane extends Pane
         dealbt.setFont(Font.font("Agency FB",FontWeight.BOLD, 16));
 		dealbt.setTextFill(new Color(0,0,0,1));
 		dealbt.setLayoutX(183.0);
-		dealbt.setLayoutY(200.0);
+		dealbt.setLayoutY(250.0);
 		dealbt.setOnMouseClicked(e -> {
                 this.deal = Integer.valueOf(dealin.getText());
+                if (this.deal > this.money){
+                    this.deal = this.money;
+                }
                 this.money -= this.deal;
                 update_dealmoney();
                 beginplaypane();
@@ -521,10 +520,10 @@ public class MainPane extends Pane
         standbtmain.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
 		standbtmain.setTextFill(new Color(0,0,0,1));
 		standbtmain.setOnMouseClicked(e->{
-                if (this.user_point>21){
+                if (this.user_point>21 || this.main_sur){
                     Alert alert = new Alert(AlertType.WARNING);
                     alert.titleProperty().set("WARNING");
-                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to Stand Anymore");
+                    alert.headerTextProperty().set("The deck you chose have busted or surrender, you can't choose to Stand Anymore");
                     alert.showAndWait();
                 }
                 else{
@@ -540,22 +539,30 @@ public class MainPane extends Pane
         surrenderbtmain.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
 		surrenderbtmain.setTextFill(new Color(0,0,0,1));
 		surrenderbtmain.setOnMouseClicked(e->{
-                this.main_sur = true;
-                this.log.add(">.. User Surrender for MAIN Deck");
-                if (this.aux_done){
-                    hostplaypane();
+                if (this.user_point>21 || this.main_done){
+                    Alert alert = new Alert(AlertType.WARNING);
+                    alert.titleProperty().set("WARNING");
+                    alert.headerTextProperty().set("The deck you chose have busted or standed, you can't choose to Surrender Anymore");
+                    alert.showAndWait();
                 }
-                if (this.aux_bust){
-                    this.money += (int) this.deal / 4;
-                    update_dealmoney();
-                    this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
-                    quitpane();
-                }
-                if (this.aux_sur){
-                    this.money += (int) this.deal / 2;
-                    update_dealmoney();
-                    this.log.add(">> User Lose for two Decks Surrender, with money left: "+Integer.toString(this.money));
-                    quitpane();
+                else{
+                    this.main_sur = true;
+                    this.log.add(">.. User Surrender for MAIN Deck");
+                    if (this.aux_done){
+                        hostplaypane();
+                    }
+                    if (this.aux_bust){
+                        this.money += (int) this.deal / 4;
+                        update_dealmoney();
+                        this.log.add(">> User Lose for one Bust and one Surrender, with money left: "+Integer.toString(this.money));
+                        quitpane();
+                    }
+                    if (this.aux_sur){
+                        this.money += (int) this.deal / 2;
+                        update_dealmoney();
+                        this.log.add(">> User Lose for two Decks Surrender, with money left: "+Integer.toString(this.money));
+                        quitpane();
+                    }
                 }
             }
         );
@@ -564,11 +571,11 @@ public class MainPane extends Pane
         hitbtmain.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
         hitbtmain.setTextFill(new Color(0,0,0,1));
         hitbtmain.setOnMouseClicked(e->{
-                if (this.user_point > 21){
+                if (this.user_point > 21 || this.main_done || this.main_sur){
                     this.main_bust = true;
                     Alert alert = new Alert(AlertType.WARNING);
                     alert.titleProperty().set("WARNING");
-                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to HIT ME");
+                    alert.headerTextProperty().set("The deck you chose have busted or stand or surrender, you can't choose to HIT ME");
                     alert.showAndWait();
                 }
                 else{
@@ -604,10 +611,10 @@ public class MainPane extends Pane
         standbtaux.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
 		standbtaux.setTextFill(new Color(0,0,0,1));
 		standbtaux.setOnMouseClicked(e->{
-                if (this.user_point_aux>21){
+                if (this.user_point_aux>21 || this.aux_sur){
                     Alert alert = new Alert(AlertType.WARNING);
                     alert.titleProperty().set("WARNING");
-                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to Stand Anymore");
+                    alert.headerTextProperty().set("The deck you chose have busted or surrender, you can't choose to Stand Anymore");
                     alert.showAndWait();
                 }
                 else{
@@ -623,10 +630,10 @@ public class MainPane extends Pane
         surrenderbtaux.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
 		surrenderbtaux.setTextFill(new Color(0,0,0,1));
 		surrenderbtaux.setOnMouseClicked(e->{
-                if (this.user_point_aux>21){
+                if (this.user_point_aux>21 || this.aux_done){
                     Alert alert = new Alert(AlertType.WARNING);
                     alert.titleProperty().set("WARNING");
-                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to Surrender Anymore");
+                    alert.headerTextProperty().set("The deck you chose have busted or stand, you can't choose to Surrender Anymore");
                     alert.showAndWait();
                 }
                 else{
@@ -654,11 +661,11 @@ public class MainPane extends Pane
         hitbtaux.setFont(Font.font("Agency FB",FontWeight.BOLD, 12));
 		hitbtaux.setTextFill(new Color(0,0,0,1));
 		hitbtaux.setOnMouseClicked(e->{
-                if (this.user_point_aux > 21){
+                if (this.user_point_aux > 21 || this.aux_done || this.aux_sur){
                     this.aux_bust = true; 
                     Alert alert = new Alert(AlertType.WARNING);
                     alert.titleProperty().set("WARNING");
-                    alert.headerTextProperty().set("The deck you chose have busted, you can't choose to HIT ME");
+                    alert.headerTextProperty().set("The deck you chose have busted or stand or surrender, you can't choose to HIT ME");
                     alert.showAndWait();
                 }
                 else{
@@ -697,10 +704,9 @@ public class MainPane extends Pane
     private void hostplaypane(){
         // Hidden card is shown
         this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
-
+        // pause_half_sec();
         this.log.add("> Host playing");
         while (this.host_point < 17){
-            pause_half_sec();
             host_add_card();
         }
 
@@ -802,7 +808,7 @@ public class MainPane extends Pane
             gainlabel.setText("+ "+String.valueOf(gain));
             resultlabel.setText(" You Win! ");
         }
-        else if (gain == 0){
+        else if (gain == 0 || this.user_point == this.host_point){
             gainlabel.setText(" Hold on ");
             resultlabel.setText(" A Tie! ");
         }
@@ -818,10 +824,24 @@ public class MainPane extends Pane
 		againbt.setLayoutX(180.0);
 		againbt.setLayoutY(160.0);
 		againbt.setOnMouseClicked(e->{
-                this.log.add(">> User choose to play game again");
-                save_log();
-                init_params();
-                init_pane();
+                if (this.money > 0){
+                    this.log.add(">> User choose to play game again");
+                    save_log();
+                    init_params();
+                    init_pane();
+                }
+                else{
+                    this.money = 2000;
+                    this.log.add(">> User choose to play game again");
+                    this.log.add(">> HAVE TO Regive User 2000");
+                    save_log();
+                    Alert alert = new Alert(AlertType.INFORMATION);
+                    alert.titleProperty().set("Run out of money");
+                    alert.headerTextProperty().set("In fact you have lose all you money... Anyway, give you 2000 again.");
+                    alert.showAndWait();
+                    init_params();
+                    init_pane();
+                }
             }
 		);
 
