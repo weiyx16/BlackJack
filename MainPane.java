@@ -79,8 +79,8 @@ public class MainPane extends Pane
 
     MainPane(Stage primaryStage){
         this.primaryStage = primaryStage;
-        this.money = 2000;
-        this.past_money = 2000;
+        this.money = 1000;
+        this.past_money = 1000;
         BackgroundImage myBI= new BackgroundImage(new Image("./card/PLAYBG.jpg",400,300,false,true),BackgroundRepeat.REPEAT, BackgroundRepeat.NO_REPEAT, BackgroundPosition.DEFAULT,BackgroundSize.DEFAULT);
         Background myBG = new Background(myBI);
         setBackground(myBG);
@@ -162,7 +162,13 @@ public class MainPane extends Pane
         getChildren().clear();
         
         // Quiet Button
-        ImageView quietbt = new ImageView(new Image("./card/voice.png",16,16,false,true));
+        ImageView quietbt = new ImageView();
+        if (this.mp1.getStatus() == Status.PAUSED){
+            quietbt.setImage(new Image("./card/quiet.png",16,16,false,true));
+        }
+        if (this.mp1.getStatus() == Status.PLAYING){
+            quietbt.setImage(new Image("./card/voice.png",16,16,false,true));
+        }
 		quietbt.setLayoutX(10.0);
 		quietbt.setLayoutY(275.0);
 		quietbt.setOnMouseClicked(e -> {
@@ -218,7 +224,7 @@ public class MainPane extends Pane
         
         if (this.user_point==21){
             this.host_card_hidden.setImage(new Image(idx_2_path(String.valueOf(this.host_card_list.get(1)))));
-            pause_half_sec();
+            // pause_half_sec();
             if (this.host_point==21){
                 this.money += this.deal;
                 update_dealmoney();
@@ -831,13 +837,13 @@ public class MainPane extends Pane
                     init_pane();
                 }
                 else{
-                    this.money = 2000;
+                    this.money = 1000;
                     this.log.add(">> User choose to play game again");
-                    this.log.add(">> HAVE TO Regive User 2000");
+                    this.log.add(">> HAVE TO Regive User 1000");
                     save_log();
                     Alert alert = new Alert(AlertType.INFORMATION);
                     alert.titleProperty().set("Run out of money");
-                    alert.headerTextProperty().set("In fact you have lose all you money... Anyway, give you 2000 again.");
+                    alert.headerTextProperty().set("In fact you have lose all you money... Anyway, give you 1000 again.");
                     alert.showAndWait();
                     init_params();
                     init_pane();
